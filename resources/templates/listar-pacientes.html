@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Pacientes - Sistema SUS</title>
+    <link rel="stylesheet" href="/css/global.css">
+
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">Cadastrar Paciente</a>
+        <a href="/pacientes/lista">Listar Pacientes</a>
+        <a href="/chamados/cadastro">Registrar Chamado</a>
+        <a href="/chamados/lista">Listar Chamados</a>
+        </div>
+    <div class="container">
+        <h2>Pacientes Cadastrados</h2>
+        <div class="add-patient-link">
+            <a href="/pacientes/cadastro">Novo Paciente</a>
+        </div>
+        <div class="table-container">
+            <table id="pacientesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Data Nasc.</th>
+                        <th>Telefone</th>
+                        <th>Email</th>
+                        <th>Endereço</th>
+                        <th>Deficiência</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="9" class="loading-message">Carregando pacientes...</td></tr>
+                </tbody>
+            </table>
+            <p id="noPatientsMessage" class="no-patients-message" style="display: none;">Nenhum paciente cadastrado ainda.</p>
+            <p id="errorMessage" class="error-message" style="display: none;">Erro ao carregar pacientes. Tente novamente mais tarde.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const pacientesTableBody = document.querySelector('#pacientesTable tbody');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const noPatientsMessage = document.getElementById('noPatientsMessage');
+            const errorMessage = document.getElementById('errorMessage');
+
+            function fetchPacientes() {
+                pacientesTableBody.innerHTML = '<tr><td colspan="9" class="loading-message">Carregando pacientes...</td></tr>';
+                noPatientsMessage.style.display = 'none';
+                errorMessage.style.display = 'none';
+
+                fetch('/pacientes', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro na rede ou servidor respondeu com erro.');
+                    }
+                    return response.json();
+                })
+                .then(pacientes => {
+                    pacientesTableBody.innerHTML = '';
+                    if (pacientes.length === 0) {
+                        noPatientsMessage.style.display = 'block';
+                    } else {
+                        pacientes.forEach(paciente => {
+                            const row = pacientesTableBody.insertRow();
+
+                            row.insertCell().textContent = paciente.id;
+                            row.insertCell().textContent = paciente.nome;
+                            row.insertCell().textContent = paciente.cpf;
+                            row.insertCell().textContent = paciente.dataDeNascimento;
+                            row.insertCell().textContent = paciente.telefoneContato;
+                            row.insertCell().textContent = paciente.emailContato;
+
+                            const endereco = paciente.endereco;
+                            let enderecoText = 'N/A';
+                            if (endereco) {
+                                enderecoText = `${endereco.logradouro}, ${endereco.numero}`;
+                                if (endereco.complemento) enderecoText += ` (${endereco.complemento})`;
+                                enderecoText += ` - ${endereco.bairro}, ${endereco.cidade}/${endereco.estado} - ${endereco.cep}`;
+                            }
+                            row.insertCell().textContent = enderecoText;
+
+                            const deficienciaText = paciente.possuiDeficiencia ?
+                                `Sim (${paciente.tipoDeDeficiencia || 'Não especificado'})` : 'Não';
+                            row.insertCell().textContent = deficienciaText;
+
+                            const actionsCell = row.insertCell();
+                            actionsCell.classList.add('action-buttons');
+
+                            const detailsButton = document.createElement('button');
+                            detailsButton.textContent = 'Ver Detalhes';
+                            detailsButton.onclick = () => {
+                                window.location.href = `/pacientes/${paciente.id}/detalhes`;
+                            };
+                            actionsCell.appendChild(detailsButton);
+
+                            const deleteButton = document.createElement('button');
+                            deleteButton.textContent = 'Deletar';
+                            deleteButton.classList.add('delete-btn');
+                            deleteButton.onclick = () => {
+                                if (confirm(`Tem certeza que deseja deletar o paciente ${paciente.nome}?`)) {
+                                    deletePaciente(paciente.id);
+                                }
+                            };
+                            actionsCell.appendChild(deleteButton);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar pacientes:', error);
+                    pacientesTableBody.innerHTML = '';
+                    errorMessage.style.display = 'block';
+                });
+            }
+
+            function deletePaciente(id) {
+                fetch(`/pacientes/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Paciente deletado com sucesso!');
+                        fetchPacientes();
+                    } else {
+                        return response.json().then(errorData => {
+                            console.error('Erro ao deletar paciente:', errorData);
+                            alert('Erro ao deletar paciente: ' + (errorData.message || 'Verifique o console para mais detalhes.'));
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro na requisição DELETE:', error);
+                    alert('Erro de conexão ao tentar deletar paciente.');
+                });
+            }
+
+            fetchPacientes();
+        });
+
+        
+    </script>
+</body>
+</html>

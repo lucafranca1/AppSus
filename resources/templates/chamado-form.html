@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Novo Chamado - Sistema SUS</title>
+    <link rel="stylesheet" href="/css/global.css">
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">Cadastrar Paciente</a>
+        <a href="/pacientes/lista">Listar Pacientes</a>
+        <a href="/chamados/cadastro">Registrar Chamado</a>
+        <a href="/chamados/lista">Listar Chamados</a>
+        </div>
+    <div class="container">
+        <h2>Registrar Novo Chamado</h2>
+        <form action="/chamados" method="post" id="chamadoForm">
+            <h3 class="section-title">Dados do Chamado</h3>
+            <div class="form-group full-width">
+                <label for="pacienteId">ID do Paciente:</label>
+                <input type="number" id="pacienteId" name="pacienteId" required placeholder="Digite o ID do paciente existente">
+            </div>
+
+            <div class="form-group full-width">
+                <label for="sintomas">Sintomas Principais:</label>
+                <textarea id="sintomas" name="sintomas" rows="4" required placeholder="Descreva os sintomas do paciente..."></textarea>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="observacoesAdicionais">Observações Adicionais:</label>
+                <textarea id="observacoesAdicionais" name="observacoesAdicionais" rows="4" placeholder="Adicione quaisquer outras observações relevantes..."></textarea>
+            </div>
+
+            <h3 class="section-title">Endereço de Atendimento</h3>
+            <div class="form-group full-width">
+                <label for="logradouroAtendimento">Logradouro:</label>
+                <input type="text" id="logradouroAtendimento" name="enderecoAtendimento.logradouro" required>
+            </div>
+
+            <div class="form-group">
+                <div>
+                    <label for="numeroAtendimento">Número:</label>
+                    <input type="text" id="numeroAtendimento" name="enderecoAtendimento.numero" required>
+                </div>
+                <div>
+                    <label for="complementoAtendimento">Complemento:</label>
+                    <input type="text" id="complementoAtendimento" name="enderecoAtendimento.complemento">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div>
+                    <label for="bairroAtendimento">Bairro:</label>
+                    <input type="text" id="bairroAtendimento" name="enderecoAtendimento.bairro" required>
+                </div>
+                <div>
+                    <label for="cidadeAtendimento">Cidade:</label>
+                    <input type="text" id="cidadeAtendimento" name="enderecoAtendimento.cidade" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div>
+                    <label for="estadoAtendimento">Estado (UF):</label>
+                    <input type="text" id="estadoAtendimento" name="enderecoAtendimento.estado" required maxlength="2" pattern="[A-Za-z]{2}" placeholder="SP">
+                </div>
+                <div>
+                    <label for="cepAtendimento">CEP:</label>
+                    <input type="text" id="cepAtendimento" name="enderecoAtendimento.cep" required pattern="\d{5}-\d{3}" placeholder="00000-000">
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="paisAtendimento">País:</label>
+                <input type="text" id="paisAtendimento" name="enderecoAtendimento.pais" value="Brasil" required>
+            </div>
+
+            <button type="submit">Registrar Chamado</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chamadoForm = document.getElementById('chamadoForm');
+
+            const cepInput = document.getElementById('cepAtendimento');
+            cepInput.addEventListener('input', function (e) {
+                let value = e.target.value.replace(/\D/g, ''); 
+                if (value.length > 5) {
+                    value = value.replace(/^(\d{5})(\d{3})$/, '$1-$2');
+                }
+                e.target.value = value;
+            });
+
+            chamadoForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const formData = new FormData(chamadoForm);
+                const chamado = {};
+                chamado.enderecoAtendimento = {};
+
+                const pacienteId = formData.get('pacienteId');
+                if (pacienteId) {
+                    chamado.paciente = { id: parseInt(pacienteId) };
+                } else {
+                    alert('Por favor, informe o ID do paciente.');
+                    return;
+                }
+
+                chamado.sintomas = formData.get('sintomas');
+                chamado.observacoesAdicionais = formData.get('observacoesAdicionais');
+
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('enderecoAtendimento.')) {
+                        chamado.enderecoAtendimento[key.substring('enderecoAtendimento.'.length)] = value;
+                    }
+                }
+
+                console.log('Chamado a ser enviado:', JSON.stringify(chamado, null, 2));
+
+                fetch(chamadoForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(chamado)
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    return response.json().then(errorData => {
+                        console.error('Erro ao registrar chamado:', errorData);
+                        alert('Erro ao registrar chamado: ' + (errorData.message || 'Verifique os dados.'));
+                        throw new Error('Erro no servidor');
+                    });
+                })
+                .then(data => {
+                    console.log('Chamado registrado com sucesso:', data);
+                    alert('Chamado registrado com sucesso!');
+                    chamadoForm.reset();
+                })
+                .catch(error => {
+                    console.error('Erro na requisição:', error);
+                });
+            });
+        });
+
+
+        
+    </script>
+</body>
+</html>

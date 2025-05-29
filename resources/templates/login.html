@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema SUS</title>
+    <link rel="stylesheet" href="/css/global.css">
+
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">Cadastrar Paciente</a>
+        <a href="/pacientes/lista">Listar Pacientes</a>
+        <a href="/chamados/cadastro">Registrar Chamado</a>
+        <a href="/chamados/lista">Listar Chamados</a>
+        </div>
+    <div class="login-container">
+        <h2>Login no Sistema SUS</h2>
+        <form action="/login" method="post">
+            <div class="form-group">
+                <label for="email">E-mail:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="senha">Senha:</label>
+                <input type="password" id="senha" name="senha" required>
+            </div>
+            <button type="submit">Entrar</button>
+        </form>
+    </div>
+</body>
+</html>

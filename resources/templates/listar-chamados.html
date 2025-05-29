@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Chamados - Sistema SUS</title>
+    <link rel="stylesheet" href="/css/global.css">
+
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">Cadastrar Paciente</a>
+        <a href="/pacientes/lista">Listar Pacientes</a>
+        <a href="/chamados/cadastro">Registrar Chamado</a>
+        <a href="/chamados/lista">Listar Chamados</a>
+        </div>
+    <div class="container">
+        <h2>Chamados Registrados</h2>
+        <div class="add-chamado-link">
+            <a href="/chamados/cadastro">Registrar Novo Chamado</a>
+        </div>
+        <div class="table-container">
+            <table id="chamadosTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Paciente (ID)</th>
+                        <th>Sintomas</th>
+                        <th>Endereço Atendimento</th>
+                        <th>Data/Hora Chamado</th>
+                        <th>Status</th>
+                        <th>Observações</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="8" class="loading-message">Carregando chamados...</td></tr>
+                </tbody>
+            </table>
+            <p id="noChamadosMessage" class="no-chamados-message" style="display: none;">Nenhum chamado cadastrado ainda.</p>
+            <p id="errorMessage" class="error-message" style="display: none;">Erro ao carregar chamados. Tente novamente mais tarde.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chamadosTableBody = document.querySelector('#chamadosTable tbody');
+            const noChamadosMessage = document.getElementById('noChamadosMessage');
+            const errorMessage = document.getElementById('errorMessage');
+
+            function fetchChamados() {
+                chamadosTableBody.innerHTML = '<tr><td colspan="8" class="loading-message">Carregando chamados...</td></tr>';
+                noChamadosMessage.style.display = 'none';
+                errorMessage.style.display = 'none';
+
+                fetch('/chamados', { 
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro na rede ou servidor respondeu com erro.');
+                    }
+                    return response.json();
+                })
+                .then(chamados => {
+                    chamadosTableBody.innerHTML = ''; 
+                    if (chamados.length === 0) {
+                        noChamadosMessage.style.display = 'block';
+                    } else {
+                        chamados.forEach(chamado => {
+                            const row = chamadosTableBody.insertRow();
+
+                            row.insertCell().textContent = chamado.id;
+                            row.insertCell().textContent = `${chamado.paciente ? chamado.paciente.nome + ' (ID: ' + chamado.paciente.id + ')' : 'N/A'}`;
+                            row.insertCell().textContent = chamado.sintomas || 'N/A';
+
+                            const enderecoAtendimento = chamado.enderecoAtendimento;
+                            let enderecoText = 'N/A';
+                            if (enderecoAtendimento) {
+                                enderecoText = `${enderecoAtendimento.logradouro}, ${enderecoAtendimento.numero}`;
+                                if (enderecoAtendimento.complemento) enderecoText += ` (${enderecoAtendimento.complemento})`;
+                                enderecoText += ` - ${enderecoAtendimento.bairro}, ${enderecoAtendimento.cidade}/${enderecoAtendimento.estado} - ${enderecoAtendimento.cep}`;
+                            }
+                            row.insertCell().textContent = enderecoText;
+
+                            const dataHoraChamado = new Date(chamado.dataHoraChamado);
+                            row.insertCell().textContent = dataHoraChamado.toLocaleString('pt-BR'); 
+                            row.insertCell().textContent = chamado.status || 'N/A';
+                            row.insertCell().textContent = chamado.observacoesAdicionais || 'Nenhuma';
+
+                            const actionsCell = row.insertCell();
+                            actionsCell.classList.add('action-buttons');
+
+                            const detailsButton = document.createElement('button');
+                            detailsButton.textContent = 'Ver Detalhes';
+                            detailsButton.onclick = () => {
+                                window.location.href = `/chamados/${chamado.id}/detalhes`;
+                            };
+                            actionsCell.appendChild(detailsButton);
+
+                            const deleteButton = document.createElement('button');
+                            deleteButton.textContent = 'Deletar';
+                            deleteButton.classList.add('delete-btn');
+                            deleteButton.onclick = () => {
+                                if (confirm(`Tem certeza que deseja deletar o chamado ID: ${chamado.id}?`)) {
+                                    deleteChamado(chamado.id);
+                                }
+                            };
+                            actionsCell.appendChild(deleteButton);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar chamados:', error);
+                    chamadosTableBody.innerHTML = '';
+                    errorMessage.style.display = 'block';
+                });
+            }
+
+            function deleteChamado(id) {
+                fetch(`/chamados/${id}`, { 
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Chamado deletado com sucesso!');
+                        fetchChamados();
+                    } else {
+                        return response.json().then(errorData => {
+                            console.error('Erro ao deletar chamado:', errorData);
+                            alert('Erro ao deletar chamado: ' + (errorData.message || 'Verifique o console para mais detalhes.'));
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro na requisição DELETE:', error);
+                    alert('Erro de conexão ao tentar deletar chamado.');
+                });
+            }
+
+            fetchChamados();
+        });
+
+        
+    </script>
+</body>
+</html>
